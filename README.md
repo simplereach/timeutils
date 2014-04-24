@@ -5,15 +5,15 @@ Various Utilities for dealing with Time in Go
 
 
 
-## ParseDateString(dt string) (t time.Time, err error)
+### ParseDateString(dt string) (t time.Time, err error)
 
 Parses a date from either a `string` into a `time.Time` object.
 
-## ParseMillis(dt int64) (t time.Time, err error)
+### ParseMillis(dt int64) (t time.Time, err error)
 Parses a milliseconds-since-epoch time stamp to a time.Time
 
 
-# License
+## License
 Approxidate is `Copyright (C) Linus Torvalds, 2005` taken from: https://github.com/thatguystone/approxidate originally from GIT, and is subject to the GIT license.
 
 ### Everything else:
