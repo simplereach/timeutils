@@ -5,9 +5,12 @@ Various Utilities for dealing with Time in Go
 
 
 
-## ParseDate(dt interface{}) (time.Time, error)
+## ParseDateString(dt string) (t time.Time, err error)
 
-Parses a date from either a `string` or an `int64` into a `time.Time` object.
+Parses a date from either a `string` into a `time.Time` object.
+
+## ParseMillis(dt int64) (t time.Time, err error)
+Parses a milliseconds-since-epoch time stamp to a time.Time
 
 
 # License

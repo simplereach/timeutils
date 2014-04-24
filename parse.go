@@ -7,8 +7,8 @@ import "time"
 import "fmt"
 
 // Takes a string and passes it through Approxidate
-// If the date is correct then
-func parseDateStr(dt string) (t time.Time, err error) {
+// Parses into a time.Time
+func ParseDateString(dt string) (t time.Time, err error) {
 	date := C.struct_timeval{}
 
 	ok := C.approxidate(C.CString(dt), &date)
@@ -21,21 +21,8 @@ func parseDateStr(dt string) (t time.Time, err error) {
 	return
 }
 
-func parseDateInt(dt int64) (t time.Time, err error) {
+// Parses a milliseconds-since-epoch time stamp to a time.Time
+func ParseMillis(dt int64) (t time.Time, err error) {
 	t = time.Unix(0, dt*1000*1000)
 	return
-}
-
-func ParseDate(dt interface{}) (time.Time, error) {
-	idt, ok := dt.(int64)
-	if ok {
-		return parseDateInt(idt)
-	}
-
-	sdt, ok := dt.(string)
-	if ok {
-		return parseDateStr(sdt)
-	}
-
-	panic("Invlid type supplied for ParseDate")
 }
