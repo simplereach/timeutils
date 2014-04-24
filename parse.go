@@ -6,6 +6,8 @@ import "C"
 import "time"
 import "fmt"
 
+// Takes a string and passes it through Approxidate
+// If the date is correct then
 func parseDateStr(dt string) (t time.Time, err error) {
 	date := C.struct_timeval{}
 
