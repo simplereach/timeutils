@@ -5,7 +5,7 @@ Various Utilities for dealing with Time in Go
 
 
 
-## ParseDate
+## ParseDate(dt interface{}) (time.Time, error)
 
 Parses a date from either a `string` or an `int64` into a `time.Time` object.
 
