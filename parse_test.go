@@ -31,7 +31,6 @@ func TestParseDateString(t *testing.T) {
 }
 
 func BenchmarkParseDateString(b *testing.B) {
-
 	for n := 0; n < b.N; n++ {
 		ParseDateString("2014-12-05 09:51:20.939152 -0500")
 	}
