@@ -1,28 +1,32 @@
 package timeutils
 
 // #include "approxidate.h"
+// #include <stdlib.h>
 // #cgo LDFLAGS: -lm
 import "C"
-import "time"
-import "fmt"
 
-// Takes a string and passes it through Approxidate
+import (
+	"fmt"
+	"time"
+	"unsafe"
+)
+
+// ParseDateString takes a string and passes it through Approxidate
 // Parses into a time.Time
-func ParseDateString(dt string) (t time.Time, err error) {
+func ParseDateString(dt string) (time.Time, error) {
 	date := C.struct_timeval{}
 
-	ok := C.approxidate(C.CString(dt), &date)
+	cStr := C.CString(dt)
+	ok := C.approxidate(cStr, &date)
+	C.free(unsafe.Pointer(cStr))
 	if int(ok) != 0 {
-		err = fmt.Errorf("Invlid Date Format %s", dt)
-		return
+		return time.Time{}, fmt.Errorf("Invlid Date Format %s", dt)
 	}
 
-	t = time.Unix(int64(date.tv_sec), int64(date.tv_usec)*1000)
-	return
+	return time.Unix(int64(date.tv_sec), int64(date.tv_usec)*1000), nil
 }
 
-// Parses a milliseconds-since-epoch time stamp to a time.Time
-func ParseMillis(dt int64) (t time.Time, err error) {
-	t = time.Unix(0, dt*1000*1000)
-	return
+// ParseMillis parses a milliseconds-since-epoch time stamp to a time.Time
+func ParseMillis(dt int64) (time.Time, error) {
+	return time.Unix(0, dt*1000*1000), nil
 }
