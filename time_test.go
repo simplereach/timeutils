@@ -38,7 +38,7 @@ func TestJSONRoundTripTimestamp(t *testing.T) {
 		if expect, got := elem.t, ts.TS; expect.Sub(got.Time) != 0 {
 			t.Errorf("[%d] Unexpected result.\nExpect:\t%s\nGot:\t%s\n", i, expect, got)
 		}
-		ts.TS.NanoPtr(true)
+		ts.TS = ts.TS.FormatMode(TimestampNano)
 		buf, err := json.Marshal(ts)
 		if err != nil {
 			t.Fatal(err)
@@ -82,7 +82,7 @@ func TestJSONRegular(t *testing.T) {
 	if expect, got := time.Unix(1438863445, 881396749), ts.TS; expect.Sub(got.Time) != 0 {
 		t.Fatalf("Unexpected result.\nExpect:\t%s\nGot:\t%s\n", expect, got)
 	}
-	ts.TS.Nano(true)
+	ts.TS = ts.TS.FormatMode(TimestampNano)
 	buf, err := json.Marshal(ts)
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestJSONTimestampSimple(t *testing.T) {
 	if expect, got := time.Unix(141779108, 0), ts.TS; expect.Sub(got.Time) != 0 {
 		t.Fatalf("Unexpected result.\nExpect:\t%s\nGot:\t%s\n", expect, got)
 	}
-	ts.TS.Nano(true)
+	ts.TS = ts.TS.FormatMode(TimestampNano)
 	buf, err := json.Marshal(ts)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestJSONTimestampSimpleInt(t *testing.T) {
 	if expect, got := time.Unix(141779108, 0), ts.TS; expect.Sub(got.Time) != 0 {
 		t.Fatalf("Unexpected result.\nExpect:\t%s\nGot:\t%s\n", expect, got)
 	}
-	ts.TS.Nano(false)
+	ts.TS = ts.TS.FormatMode(Timestamp)
 	buf, err := json.Marshal(ts)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestJSONTimestampManual(t *testing.T) {
 		if expect, got := tt, ts.TS; expect.Sub(got.Time) != 0 {
 			t.Errorf("[%d] Unexpected result.\nExpect:\t%s\nGot:\t%s\n", i, expect, got)
 		}
-		ts.TS.Nano(true)
+		ts.TS = ts.TS.FormatMode(TimestampNano)
 		buf, err := json.Marshal(ts)
 		if err != nil {
 			t.Fatal(err)
@@ -272,7 +272,7 @@ func TestBSONTimestampSimpleIntNano(t *testing.T) {
 	if expect, got := time.Unix(141779108, 999), ts.TS; expect.Sub(got.Time) != 0 {
 		t.Fatalf("Unexpected result.\nExpect:\t%s\nGot:\t%s\n", expect, got)
 	}
-	ts.TS.Nano(true)
+	ts.TS = ts.TS.FormatMode(TimestampNano)
 	buf2, err := bson.Marshal(ts)
 	if err != nil {
 		t.Fatal(err)
