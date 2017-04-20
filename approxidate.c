@@ -250,7 +250,6 @@ static int is_date(int year, int month, int day, struct atm *now_tm, time_t now,
 	if (month > 0 && month < 13 && day > 0 && day < 32) {
 		struct atm check = *tm;
 		struct atm *r = (now_tm ? &check : tm);
-		time_t specified;
 
 		r->tm_mon = month - 1;
 		r->tm_mday = day;
@@ -270,14 +269,6 @@ static int is_date(int year, int month, int day, struct atm *now_tm, time_t now,
 		if (!now_tm)
 			return 1;
 
-		specified = tm_to_time_t(r);
-
-		/* Be it commit time or author time, it does not make
-		 * sense to specify timestamp way into the future.  Make
-		 * sure it is not later than ten days from now...
-		 */
-		if (now + 10*24*3600 < specified)
-			return 0;
 		tm->tm_mon = r->tm_mon;
 		tm->tm_mday = r->tm_mday;
 		if (year != -1)
@@ -287,11 +278,9 @@ static int is_date(int year, int month, int day, struct atm *now_tm, time_t now,
 	return 0;
 }
 
-static int match_multi_number(unsigned long num, char c, const char *date, char *end, struct atm *tm)
+static int match_multi_number(unsigned long num, char c, const char *date,
+			      char *end, struct atm *tm, time_t now)
 {
-	time_t now;
-	struct atm now_tm;
-	struct atm *refuse_future;
 	long num2, num3, num4;
 
 	num2 = strtol(end+1, &end, 10);
@@ -327,17 +316,14 @@ static int match_multi_number(unsigned long num, char c, const char *date, char 
 	case '-':
 	case '/':
 	case '.':
-		now = time(NULL);
-		refuse_future = NULL;
-		if (gmtime_r(&now, (struct tm*)&now_tm))
-			refuse_future = &now_tm;
-
+		if (!now)
+			now = time(NULL);
 		if (num > 70) {
 			/* yyyy-mm-dd? */
-			if (is_date(num, num2, num3, refuse_future, now, tm))
+			if (is_date(num, num2, num3, NULL, now, tm))
 				break;
 			/* yyyy-dd-mm? */
-			if (is_date(num, num3, num2, refuse_future, now, tm))
+			if (is_date(num, num3, num2, NULL, now, tm))
 				break;
 		}
 		/* Our eastern European friends say dd.mm.yy[yy]
@@ -345,14 +331,14 @@ static int match_multi_number(unsigned long num, char c, const char *date, char 
 		 * mm/dd/yy[yy] form only when separator is not '.'
 		 */
 		if (c != '.' &&
-		    is_date(num3, num, num2, refuse_future, now, tm))
+		    is_date(num3, num, num2, NULL, now, tm))
 			break;
 		/* European dd.mm.yy[yy] or funny US dd/mm/yy[yy] */
-		if (is_date(num3, num2, num, refuse_future, now, tm))
+		if (is_date(num3, num2, num, NULL, now, tm))
 			break;
 		/* Funny European mm.dd.yy */
 		if (c == '.' &&
-		    is_date(num3, num, num2, refuse_future, now, tm))
+		    is_date(num3, num, num2, NULL, now, tm))
 			break;
 		return 0;
 	}
@@ -363,7 +349,8 @@ static int match_multi_number(unsigned long num, char c, const char *date, char 
  * Have we filled in any part of the time/date yet?
  * We just do a binary 'and' to see if the sign bit
  * is set in all the values.
- */static inline int nodate(struct atm *tm)
+ */
+static inline int nodate(struct tm *tm)
 {
 	return (tm->tm_year &
 		tm->tm_mon &
@@ -389,7 +376,7 @@ static int match_digit(const char *date, struct atm *tm, int *offset, int *tm_gm
 	 * more than 8 digits. This is because we don't want to rule out
 	 * numbers like 20070606 as a YYYYMMDD date.
 	 */
-	if (num >= 100000000 && nodate(tm)) {
+	if (num >= 100000000 && nodate((struct tm*)tm)) {
 		time_t time = num;
 		if (gmtime_r(&time, (struct tm*)tm)) {
 			*tm_gmt = 1;
@@ -406,7 +393,7 @@ static int match_digit(const char *date, struct atm *tm, int *offset, int *tm_gm
 	case '/':
 	case '-':
 		if (isdigit(end[1])) {
-			int match = match_multi_number(num, *end, date, end, tm);
+			int match = match_multi_number(num, *end, date, end, tm, 0);
 			if (match)
 				return match;
 		}
@@ -545,6 +532,7 @@ int parse_date_basic(const char *date, struct timeval *tv, int *offset)
 	if (!offset)
 		offset = &dummy_offset;
 
+	memset(&tm, 0, sizeof(tm));
 	tm.tm_year = -1;
 	tm.tm_mon = -1;
 	tm.tm_mday = -1;
@@ -582,11 +570,19 @@ int parse_date_basic(const char *date, struct timeval *tv, int *offset)
 		date += match;
 	}
 
-	// mktime() is larger than struct atm, so it can clobber usec
 	tv->tv_usec = tm.tm_usec;
 
 	/* mktime uses local timezone */
 	tv->tv_sec = tm_to_time_t(&tm);
+	if (*offset == -1) {
+		time_t temp_time = mktime((struct tm*)&tm);
+		if (tv->tv_sec > temp_time) {
+			*offset = (tv->tv_sec - temp_time) / 60;
+		} else {
+			*offset = -(int)((temp_time - tv->tv_sec) / 60);
+		}
+	}
+
 	if (*offset == -1)
 		*offset = (((time_t)tv->tv_sec) - mktime((struct tm*)&tm)) / 60;
 
@@ -729,7 +725,7 @@ static const char *approxidate_alpha(const char *date, struct atm *tm, struct at
 	const char *end = date;
 	int i;
 
-	while (isalpha(*++end));
+	while (isalpha(*++end))
 		;
 
 	for (i = 0; i < 12; i++) {
@@ -820,7 +816,8 @@ static const char *approxidate_alpha(const char *date, struct atm *tm, struct at
 	return end;
 }
 
-static const char *approxidate_digit(const char *date, struct atm *tm, int *num)
+static const char *approxidate_digit(const char *date, struct atm *tm, int *num,
+				     time_t now)
 {
 	char *end;
 	unsigned long number = strtoul(date, &end, 10);
@@ -831,7 +828,8 @@ static const char *approxidate_digit(const char *date, struct atm *tm, int *num)
 	case '/':
 	case '-':
 		if (isdigit(end[1])) {
-			int match = match_multi_number(number, *end, date, end, tm);
+			int match = match_multi_number(number, *end, date, end,
+						       tm, now);
 			if (match)
 				return date + match;
 		}
@@ -878,7 +876,7 @@ static int approxidate_str(const char *date, struct timeval *tv)
 	time_t time_sec;
 
 	time_sec = tv->tv_sec;
-	localtime_r(&time_sec, (struct tm*)	&tm);
+	localtime_r(&time_sec, (struct tm*)&tm);
 	now = tm;
 
 	tm.tm_year = -1;
@@ -893,7 +891,7 @@ static int approxidate_str(const char *date, struct timeval *tv)
 		date++;
 		if (isdigit(c)) {
 			pending_number(&tm, &number);
-			date = approxidate_digit(date-1, &tm, &number);
+			date = approxidate_digit(date-1, &tm, &number, time_sec);
 			touched = 1;
 			continue;
 		}
